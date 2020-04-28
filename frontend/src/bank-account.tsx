@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 import { useParams } from "react-router-dom";
 
@@ -16,8 +16,21 @@ const BankAccount = () => {
   const { account_id } = useParams();
   const [balance, setBalance] = useState<number | null>(null);
 
+  const STATIC_OPTIONS = useMemo(
+    () => ({
+      share: true,
+      filter: (message: any) => {
+        console.log("Received message: " + message.data);
+        const data = JSON.parse(message.data);
+        return data.account_id === account_id;
+      }
+    }),
+    []
+  );
+
   const [sendMessage, lastMessage, readyState, getWebSocket] = useWebSocket(
-    `${SOCKET_URL}/${account_id}`
+    `${SOCKET_URL}`,
+    STATIC_OPTIONS
   );
 
   const connectionStatus = CONNECTION_STATUSES[readyState];
@@ -25,28 +38,23 @@ const BankAccount = () => {
   useEffect(
     () => {
       if (lastMessage !== null) {
-        // getWebSocket returns the WebSocket wrapped in a Proxy.
-        // This is to restrict actions like mutating a shared websocket, overwriting handlers, etc
-        const currentWebsocketUrl = getWebSocket().url;
-        console.log("received a message from ", currentWebsocketUrl);
+        const data = JSON.parse(lastMessage.data);
+        setBalance(data.balance);
       }
     },
     [lastMessage]
   );
 
-  useEffect(
-    () => {
-      const fetchData = async () => {
-        const response = await fetch(
-          `http://localhost:8080/account/${account_id}/balance`
-        );
-        const { balance } = await response.json(); // {"balance": 42}
-        setBalance(balance);
-      };
-      fetchData();
-    },
-    [lastMessage]
-  );
+  useEffect(() => {
+    async function fetchData() {
+      const response = await fetch(
+        `http://localhost:8080/account/${account_id}/balance`
+      );
+      const { balance } = await response.json(); // {"balance": 42}
+      setBalance(balance);
+    }
+    fetchData();
+  }, []);
 
   // @ts-ignore
   async function handleDeposit() {

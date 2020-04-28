@@ -1,6 +1,8 @@
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const morgan = require("morgan");
+const WebSocket = require("ws");
 
 const app = express();
 const port = 8080;
@@ -20,9 +22,28 @@ app.post("/account/:account_id/deposit/:deposit", (req, res) => {
   const balance = data[account_id] || 0;
   const newBalance = balance + parseInt(deposit);
   data[account_id] = newBalance;
+
+  wss.clients.forEach(function each(client) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ account_id, balance: newBalance }));
+    }
+  });
+
   return res.status(200).json({ balance: newBalance });
 });
 
-app.listen(port, () =>
-  console.log(`Example app listening at http://localhost:${port}`)
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: "/ws" });
+
+wss.on("connection", function connection(ws, req) {
+  console.log(`A new client (ip=${req.socket.remoteAddress}) connects`);
+  console.log(`Current client count=${wss.clients.size}`);
+
+  ws.on("close", () => {
+    console.log("A client closes");
+  });
+});
+
+server.listen(port, () =>
+  console.log(`The server is listening at http://localhost:${port}`)
 );
