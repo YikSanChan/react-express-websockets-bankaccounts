@@ -1,6 +1,8 @@
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const morgan = require("morgan");
+const WebSocket = require("ws");
 
 const app = express();
 const port = 8080;
@@ -23,6 +25,18 @@ app.post("/account/:account_id/deposit/:deposit", (req, res) => {
   return res.status(200).json({ balance: newBalance });
 });
 
-app.listen(port, () =>
-  console.log(`Example app listening at http://localhost:${port}`)
+const server = http.createServer(app);
+
+const wss = new WebSocket.Server({ server, path: "/ws" });
+
+wss.on("connection", function connection(ws) {
+  ws.on("message", function incoming(message) {
+    console.log("received: %s", message);
+  });
+
+  ws.send("something");
+});
+
+server.listen(port, () =>
+  console.log(`The server is listening at http://localhost:${port}`)
 );

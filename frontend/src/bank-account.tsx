@@ -17,7 +17,7 @@ const BankAccount = () => {
   const [balance, setBalance] = useState<number | null>(null);
 
   const [sendMessage, lastMessage, readyState, getWebSocket] = useWebSocket(
-    `${SOCKET_URL}/${account_id}`
+    `${SOCKET_URL}`
   );
 
   const connectionStatus = CONNECTION_STATUSES[readyState];
@@ -36,13 +36,13 @@ const BankAccount = () => {
 
   useEffect(
     () => {
-      const fetchData = async () => {
+      async function fetchData() {
         const response = await fetch(
           `http://localhost:8080/account/${account_id}/balance`
         );
         const { balance } = await response.json(); // {"balance": 42}
         setBalance(balance);
-      };
+      }
       fetchData();
     },
     [lastMessage]
